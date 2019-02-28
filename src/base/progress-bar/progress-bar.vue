@@ -33,7 +33,7 @@
 				percent:0
 			}
 		},
-		computed: {
+		computed: { 
 			...mapGetters([
 				'currentSong'
 			])
