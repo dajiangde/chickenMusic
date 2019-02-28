@@ -1,52 +1,40 @@
 <template>
   <div class="song-list">
     <ul>
-      <li @click="selectItem(song, index)" class="item" v-for="(song, index) in songs">
-        <div class="rank" v-show="rank">
-          <span :class="getRankCls(index)" v-text="getRankText(index)"></span>
+      <li class="item" v-for="(item,index) in songs" @click="playSong(item,index)">
+        <div class="rank" v-if="rank">
+          <span ></span>
         </div>
         <div class="content">
-          <h2 class="name">{{song.name}}</h2>
-          <p class="desc">{{getDesc(song)}}</p>
+          <h2 class="name">{{item.name}}</h2>
+          <p class="desc">
+						<template>{{item.singer}}</template>
+						路{{item.album}}
+					</p>
         </div>
       </li>
     </ul>
   </div>
 </template>
 
-<script type="text/ecmascript-6">
-  export default {
-    props: {
-      songs: {
-        type: Array,
-        default: []
-      },
-      rank: {
-        type: Boolean,
-        default: false
-      }
-    },
-    methods: {
-      selectItem(item, index) {
-        this.$emit('select', item, index)
-      },
-      getDesc(song) {
-        return `${song.singer}·${song.album}`
-      },
-      getRankCls(index) {
-        if (index <= 2) {
-          return `icon icon${index}`
-        } else {
-          return 'text'
-        }
-      },
-      getRankText(index) {
-        if (index > 2) {
-          return index + 1
-        }
-      }
-    }
-  }
+<script>
+  export default{
+		props: {
+			songs: {
+				type: Array,
+				default: []
+			},
+			rank:{
+				type:Boolean,
+				default: false
+			}
+		},
+		methods: {
+			playSong(song,index) {
+				this.$emit('selectSong',song,index)
+			}
+		},
+	}
 </script>
 
 <style scoped lang="stylus" rel="stylesheet/stylus">
