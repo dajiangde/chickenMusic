@@ -1,86 +1,107 @@
 <template>
-  <div class="progress-bar" ref="progressBar" @click="progressClick">
-    <div class="bar-inner">
+  <div class="progress-bar" @click.stop="jumpTime">
+    <div class="bar-inner" ref="bar">
       <div class="progress" ref="progress"></div>
-      <div class="progress-btn-wrapper" ref="progressBtn"
-           @touchstart.prevent="progressTouchStart"
-           @touchmove.prevent="progressTouchMove"
-           @touchend="progressTouchEnd"
-      >
+      <div class="progress-btn-wrapper" ref="btnWrapper" @touchstart.prevent="onProgressBarStart" @touchmove.prevent="onProgressBarMove" @touchend="onProgressBarEnd">
         <div class="progress-btn"></div>
       </div>
     </div>
   </div>
 </template>
 
-<script type="text/ecmascript-6">
-  import {prefixStyle} from 'common/js/dom'
-
-  const progressBtnWidth = 16
-  const transform = prefixStyle('transform')
-
-  export default {
-    props: {
-      percent: {
-        type: Number,
-        default: 0
-      }
-    },
-    created() {
-      this.touch = {}
-    },
-    methods: {
-      progressTouchStart(e) {
-        this.touch.initiated = true
-        this.touch.startX = e.touches[0].pageX
-        this.touch.left = this.$refs.progress.clientWidth
-      },
-      progressTouchMove(e) {
-        if (!this.touch.initiated) {
-          return
-        }
-        const deltaX = e.touches[0].pageX - this.touch.startX
-        const offsetWidth = Math.min(this.$refs.progressBar.clientWidth - progressBtnWidth, Math.max(0, this.touch.left + deltaX))
-        this._offset(offsetWidth)
-        this.$emit('percentChanging', this._getPercent())
-      },
-      progressTouchEnd() {
-        this.touch.initiated = false
-        this._triggerPercent()
-      },
-      progressClick(e) {
-        const rect = this.$refs.progressBar.getBoundingClientRect()
-        const offsetWidth = e.pageX - rect.left
-        this._offset(offsetWidth)
-        // 这里当我们点击 progressBtn 的时候，e.offsetX 获取不对
-        // this._offset(e.offsetX)
-        this._triggerPercent()
-      },
-      setProgressOffset(percent) {
-        if (percent >= 0 && !this.touch.initiated) {
-          const barWidth = this.$refs.progressBar.clientWidth - progressBtnWidth
-          const offsetWidth = percent * barWidth
-          this._offset(offsetWidth)
-        }
-      },
-      _triggerPercent() {
-        this.$emit('percentChange', this._getPercent())
-      },
-      _offset(offsetWidth) {
-        this.$refs.progress.style.width = `${offsetWidth}px`
-        this.$refs.progressBtn.style[transform] = `translate3d(${offsetWidth}px,0,0)`
-      },
-      _getPercent() {
-        const barWidth = this.$refs.progressBar.clientWidth - progressBtnWidth
-        return this.$refs.progress.clientWidth / barWidth
-      }
-    },
-    watch: {
-      percent(newPercent) {
-        this.setProgressOffset(newPercent)
-      }
-    }
-  }
+<script>
+	import { prefixStyle } from 'common/js/dom'
+	import {mapGetters} from 'vuex'
+	const transform = prefixStyle('transform')
+	const btnWidth=16
+	
+  export default{
+		props: {
+			totalTime: {
+				type: Number,
+				default: 0
+			},
+			currentTime: {
+				type: Number,
+				default: 0
+			}
+		},
+		data() {
+			return {
+				moveDelta: 0,
+				btnTranslateX: 0,
+				percent:0
+			}
+		},
+		computed: {
+			...mapGetters([
+				'currentSong'
+			])
+		},
+		methods: {
+			jumpTime(e){
+				console.log(e);
+				if(e.target.className==='progress-btn'||e.target.className==='progress-btn-wrapper'){
+					return
+				}
+				const offsetX=e.offsetX
+				this.btnTranslateX=offsetX
+				this.percent=offsetX/this.delta
+				this.$refs.btnWrapper.style[transform]=`translate3d(${offsetX}px,0,0)`
+				this.$refs.progress.style['width']=this.percent*100+'%'
+				this.$emit('progressDragEnd',this.percent)
+			},
+			onProgressBarStart(e) {
+				console.log(e.touches[0]);
+				this.isOnDrag=true
+				this.startClienX=e.touches[0].clientX
+			},
+			onProgressBarMove(e){
+				this.moveDelta=e.touches[0].clientX-this.startClienX
+				let translateX=this.btnTranslateX+this.moveDelta
+				if(translateX<0){
+					translateX=0
+				}
+				if(translateX>this.delta){
+					translateX=this.delta
+				}
+				this.$refs.btnWrapper.style[transform]=`translate3d(${translateX}px,0,0)`
+				this.percent=translateX/this.delta
+				this.$emit('GetCurrentProgressPosition',this.percent)
+				this.$refs.progress.style['width']=this.percent*100+'%'
+			},
+			onProgressBarEnd(e){
+				this.btnTranslateX+=this.moveDelta
+				if(this.btnTranslateX<0){
+					this.btnTranslateX=0
+				}
+				if(this.btnTranslateX>this.delta){
+					this.btnTranslateX=this.delta
+				}
+				this.$emit('progressDragEnd',this.percent)
+				console.log(this.btnTranslateX);
+				this.isOnDrag=false
+			}
+		},
+		watch: {
+			currentTime(newTime) {
+				if(newTime===this.totalTime||this.isOnDrag){
+					return
+				}
+				this.percent=newTime/this.totalTime
+				const moveX=this.delta*this.percent
+				this.$refs.progress.style['width']=this.percent*100+'%'
+				this.$refs.btnWrapper.style[transform]=`translate3d(${moveX}px,0,0)`
+			},
+			currentSong(newSong){
+				this.btnTranslateX=0
+				this.isOnDrag=false
+				if(!this.delta){
+					this.delta=this.$refs.bar.clientWidth-btnWidth
+				}
+			}
+		},
+	}
 </script>
 
 <style scoped lang="stylus" rel="stylesheet/stylus">
